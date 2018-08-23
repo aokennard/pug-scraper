@@ -15,8 +15,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 GAME_URL = "http://na.pug.champ.gg/games"
 MAIN_URL = "http://na.pug.champ.gg"
 B_GAME_URL = "http://na.pug.champ.gg/game/"
-GECKO_PATH = r'/home/alex/geckodriver' if sys.platform is "posix" else "C:\\Users\\Alex\\AppData\\Local\\Temp\\Temp1_geckodriver-v0.21.0-win64.zip\\geckodriver.exe"
-LOGS_URL = "http://logs.tf/json/" # id
+GECKO_PATH = r'/home/alex/geckodriver' if sys.platform is "posix" else "C:\\Users\\Alex\\Downloads\\geckodriver-v0.21.0-win64\\geckodriver.exe"
 LOGS_PLAYER_URL = "http://logs.tf/api/v1/log?player="
 
 # Things to consider: python 'fluentwait' for selenium.
@@ -273,8 +272,8 @@ def get_log_by_id(id):
             '''
 #pug_is_launching()
 #print get_game_players()
-#make_current_players()
+make_current_players()
 #pprint.pprint(get_log_by_id("1"))#print get_current_games()
 #print(get_game_players("http://na.pug.champ.gg/game/5a2f92c2716b252eb5fb340a"))
-yosh = PugUser(sid="76561198039891603", user="yosh")
-yosh.update_stats_from_logs()
+#yosh = PugUser(sid="76561198039891603", user="yosh")
+#yosh.update_stats_from_logs()
