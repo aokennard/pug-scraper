@@ -1,19 +1,24 @@
-from bs4 import BeautifulSoup
 import urllib3, requests, json
+import sys
 from contextlib import closing
+
+from bs4 import BeautifulSoup
+from enum import Enum
 from selenium.webdriver import Firefox
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
 from enum import Enum
 import pprint
 GET = "GET"
 GAME_URL = "http://na.pug.champ.gg/games"
 MAIN_URL = "http://na.pug.champ.gg"
 B_GAME_URL = "http://na.pug.champ.gg/game/"
-GECKO_PATH = r'/usr/local/bin/geckodriver'
 LOGS_URL = "http://logs.tf/json/" # id
+=======
+from selenium.webdriver.support.ui import WebDriverWait
+
+GECKO_PATH = r'/home/alex/geckodriver' if sys.platform is "posix" else "C:\\Users\\Alex\\Downloads\\geckodriver-v0.21.0-win64\\geckodriver.exe"
+LOGS_PLAYER_URL = "http://logs.tf/api/v1/log?player="
 
 # Things to consider: python 'fluentwait' for selenium.
 # TODO: get consistent querying going for WebDriverWait
@@ -37,7 +42,7 @@ weights = {PugClass.Scout: .85,
 
 
 
-class GameData: # TODO store in db
+class GameData:
     '''
         Contains metadata about each game played, such as game_id, storage of {PugUser:Class}, logs page, and local storage of logs
     '''
@@ -55,24 +60,51 @@ class PugUser: # TODO store in db
             5-4, 4-3, not 4-2, or 1-1. 
    '''
    #Weights on ELO for classes
+   def __init__(self, sid, user):
+       self.steamid64 = sid
+       self.username = user
 
-
-   user_id = -1
+   steamid64 = "" # is the ID pugchamp uses
    username = ""
-   #{Class: ([Log_ids of games played], ELO for class)}
-   user_stats = dict()
+   #{Class:  ELO for class}
+   user_stats = dict((c, 0) for c in PugClass)
    weighted_elo = 0
    def get_stats_from_file(self): # TODO load from db
        # Loads user_stats
        # If there is nothing, then ELO is auto-0
        pass
+   newest_checked_log_id = 0 # Link to the last log user played in, updated every once in a while
+   def update_stats_from_logs(self):
+       # Query logs.tf for this players logs (STEAMID64)
+       player_logs = json.loads(http.request("GET", LOGS_PLAYER_URL + self.steamid64 + "&limit=10000").data.decode("UTF-8"))
+       logs_array = player_logs["logs"][::-1]
+       print(logs_array)
+       for log in logs_array:
+            log_id = int(json.load(log)["id"])
+            if self.newest_checked_log_id != 0 and log_id < self.newest_checked_log_id:
+                continue # not sure if I will need to calculate ELO differently for those who have not been calculated
+                # vs those who just need logs updated.
+            log_json = http.request("GET", LOGS_URL + str(log_id))
+            name_map = log_json["names"]
+            player_id = -1
+            for id, name in name_map:
+                if name == self.username:
+                    player_id = id
+            player_stats = log_json["players"][player_id]
+            # Do ELO stuff here...
+            self.newest_checked_log_id = log_id
 
    def compute_elo_from_stats(self):
-       self.get_stats_from_file()
-       if all(len(v) == 0 for v in self.user_stats.values()):
+       self.update_stats_from_logs()
+       if all(v for v in self.user_stats.values()):
            self.weighted_elo = 0
            return
        # I'm able to get stats, but need a proper way of quantifying them for each player, TODO
+       else:
+           for tf2class in weights:
+               self.weighted_elo += (self.user_stats[tf2class] * weights[tf2class]) / 4
+               # mega arbitrary, do more with this
+
 
 
 class PugStruct: # Doesn't need to be stored in DB, as this is just current players
@@ -121,7 +153,7 @@ class PugStruct: # Doesn't need to be stored in DB, as this is just current play
         self.weighted_elo = sum(map(lambda x : x.weighted_elo, self.get_current_players())) / self.online_users
 
 '''
-    :return HTML for the overall /games page
+    :return HTML for the overall /games page or a specific one if given
 '''
 def get_games_html(url=GAME_URL):
     with closing(Firefox(executable_path=GECKO_PATH)) as browser:
@@ -131,6 +163,7 @@ def get_games_html(url=GAME_URL):
         return browser.page_source
 
 '''
+<<<<<<< HEAD
     :return HTML for an individual game page
 '''
 def get_game_html(url):
@@ -141,6 +174,8 @@ def get_game_html(url):
         return browser.page_source
 
 '''
+=======
+>>>>>>> 5ea31d04f0a4f68e52d30a078c7aaf8d6e6759db
     :return HTML for main page for pugchamp
 '''
 def get_url_html(url=MAIN_URL):
@@ -161,6 +196,7 @@ def get_game_url_from_id(game_str):
     base = "http://na.pug.champ.gg/game/"
     quot_split = game_str.split("&quot;")
     return base + quot_split[3]
+    # "{&quot;_id&quot;:&quot;5a2a4163a6eb5e0e667be77d&quot;,&quot;map&quot;:{&quot;name&quot;:&quot;Gullywash&quot;,&quot;file&quot;:&quot;cp_gullywash_final1&quot;,&quot;image&quot;:&quot;gullywash.png&quot;,&quot;config&quot;:&quot;pugchamp-6v6-standard&quot;,&quot;id&quot;:&quot;gullywash&quot;},&quot;date&quot;:&quot;2017-12-08T07:38:11.515Z&quot;,&quot;status&quot;:&quot;launching&quot;,&quot;teams&quot;:[{&quot;captain&quot;:{&quot;_id&quot;:&quot;594b61f9092628c466323ba0&quot;,&quot;steamID&quot;:&quot;76561198240745690&quot;,&quot;alias&quot;:&quot;Bowserr_&quot;,&quot;admin&quot;:false,&quot;stats&quot;:{},&quot;id&quot;:&quot;594b61f9092628c466323ba0&quot;,&quot;groups&quot;:[]},&quot;faction&quot;:&quot;BLU&quot;},{&quot;captain&quot;:{&quot;_id&quot;:&quot;56f5f7cf7af492d940f6a334&quot;,&quot;steamID&quot;:&quot;76561197970669109&quot;,&quot;alias&quot;:&quot;b4nny&quot;,&quot;admin&quot;:false,&quot;stats&quot;:{},&quot;id&quot;:&quot;56f5f7cf7af492d940f6a334&quot;,&quot;groups&quot;:[]},&quot;faction&quot;:&quot;RED&quot;}],&quot;score&quot;:[],&quot;id&quot;:&quot;5a2a4163a6eb5e0e667be77d&quot;}"
 
 
 '''
@@ -234,7 +270,7 @@ def pug_is_launching():
 
 def get_game_players(game_url):
     player_dict = dict() # player : (class, id)
-    soup = BeautifulSoup(get_game_html(game_url),'html.parser')
+    soup = BeautifulSoup(get_games_html(game_url),'html.parser')
     factions = soup.find_all("div", {"class": "flex-3 faction"})[2:]
     classes = soup.find_all("div", {"class": "flex-3 faction"})[2].find_all("div")
     for i in factions:
@@ -248,7 +284,10 @@ def get_game_players(game_url):
     return player_dict
 
 def get_log_by_id(id):
-    return json.loads(str(BeautifulSoup(http.request(GET, LOGS_URL + id).data).get_text()))
+    #return json.loads(str(BeautifulSoup(http.request(GET, LOGS_URL + id).data).get_text()))
+    rq = http.request('GET', LOGS_URL + id).data
+    print(rq)
+    return json.loads(rq.decode("UTF-8"))
 
 
 #get_current_main_page()
@@ -265,3 +304,10 @@ print(get_url_html())
 #make_current_players()
 #pprint.pprint(get_log_by_id("1"))#print get_current_games()
 #print get_game_players("http://na.pug.champ.gg/game/5a2f92c2716b252eb5fb340a")
+#pug_is_launching()
+#print get_game_players()
+make_current_players()
+#pprint.pprint(get_log_by_id("1"))#print get_current_games()
+#print(get_game_players("http://na.pug.champ.gg/game/5a2f92c2716b252eb5fb340a"))
+#yosh = PugUser(sid="76561198039891603", user="yosh")
+#yosh.update_stats_from_logs()
